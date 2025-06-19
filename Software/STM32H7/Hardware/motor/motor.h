@@ -26,7 +26,7 @@ void motor_update(void);
 void motor_init(void);
 void motor_set_speed(int32_t l_speed, int32_t r_speed);
 
-extern PID_t motor_l_pid;
-extern PID_t motor_r_pid;
+extern PID_t motor_l_speed_pid;
+extern PID_t motor_r_speed_pid;
 
 #endif //MOTOR_H

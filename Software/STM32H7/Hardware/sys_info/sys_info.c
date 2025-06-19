@@ -32,14 +32,14 @@ void sys_info_update(void) {
     snprintf(speed2_str, sizeof(speed2_str), "ENC_B: %d    ", encoder2_speed);
     OLED_ShowString(6, 3, speed2_str, 12, 0);
     char output1_str[16];
-    snprintf(output1_str, sizeof(output1_str), "OUT_A: %d    ", (int32_t) motor_l_pid.output);
+    snprintf(output1_str, sizeof(output1_str), "OUT_A: %d    ", (int32_t) motor_l_speed_pid.output);
     OLED_ShowString(6, 5, output1_str, 12, 0);
     char output2_str[16];
-    snprintf(output2_str, sizeof(output2_str), "OUT_B: %d    ", (int32_t) motor_r_pid.output);
+    snprintf(output2_str, sizeof(output2_str), "OUT_B: %d    ", (int32_t) motor_r_speed_pid.output);
     OLED_ShowString(6, 7, output2_str, 12, 0);
 
     char uart_msg[40];
     snprintf(uart_msg, sizeof(uart_msg), "ENC_A=%d,ENC_B=%d,OUT_A=%d,OUT_B=%d,", encoder1_speed, encoder2_speed,
-             (int32_t) motor_l_pid.output, (int32_t) motor_r_pid.output);
+             (int32_t) motor_l_speed_pid.output, (int32_t) motor_r_speed_pid.output);
     HAL_UART_Transmit(&hlpuart1, (uint8_t *) uart_msg, strlen(uart_msg), HAL_MAX_DELAY);
 }
