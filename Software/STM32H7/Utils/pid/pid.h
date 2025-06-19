@@ -10,8 +10,8 @@ typedef enum {
 
 typedef struct {
     float kp, ki, kd;
-    float target_speed;     /* 目标速度 */
-    float current_speed;    /* 当前速度 */
+    float target;     /* 目标速度 */
+    float current;    /* 当前速度 */
     float error;            /* 当前误差 */
     float last_error;       /* 上一次误差 */
     float integral;         /* 积分值 */
@@ -24,6 +24,7 @@ typedef struct {
 } PID_t;
 
 void pid_init(PID_t *pid, float kp, float ki, float kd, float dt);
+void pid_set_mode(PID_t *pid, const PID_Mode_t mode);
 float pid_update(PID_t *pid, float current_speed);
 
 #endif //PID_H

@@ -51,6 +51,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Utils/pid/pid.h
         Hardware/imu/imu.c
         Hardware/imu/imu.h
+        Utils/uart_cmd/uart_cmd.c
+        Utils/uart_cmd/uart_cmd.h
 )
 
 # Add STM32CubeMX generated sources
