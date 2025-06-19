@@ -3,6 +3,11 @@
 
 #include "stm32h7xx_hal.h"
 
+typedef enum {
+    PID_MODE_POSITION,  /* 位置控制模式 */
+    PID_MODE_SPEED      /* 速度控制模式 */
+} PID_Mode_t;
+
 typedef struct {
     float kp, ki, kd;
     float target_speed;     /* 目标速度 */
@@ -15,6 +20,7 @@ typedef struct {
     float last_output;      /* 上一次输出值 */
     float integral_max;     /* 积分最大值 */
     float integral_min;     /* 积分最小值 */
+    PID_Mode_t mode;        /* PID 模式 */
 } PID_t;
 
 void pid_init(PID_t *pid, float kp, float ki, float kd, float dt);

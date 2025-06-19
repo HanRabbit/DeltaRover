@@ -8,14 +8,10 @@ PID_t motor_l_pid;
 PID_t motor_r_pid;
 
 void motor_init(void) {
-    pid_init(&motor_l_pid, 0.01f, 0.1f, 0.001f, 0.01f); // 初始化左电机 PID 控制器
-    pid_init(&motor_r_pid, 0.01f, 0.1f, 0.001f, 0.01f); // 初始化右电机 PID 控制器
-    motor_l_pid.integral_max = 100.0f; // 设置左电机积分最大值
-    motor_l_pid.integral_min = -100.0f; // 设置左电机积分最小值
-    motor_r_pid.integral_max = 100.0f; // 设置右电机积分最大值
-    motor_r_pid.integral_min = -100.0f; // 设置右电机积分最小值
-    motor_l_pid.target_speed = 0.0f; // 设置左电机目标速度为 0
-    motor_r_pid.target_speed = 0.0f; // 设置右电机目标速度为 0
+    pid_init(&motor_l_pid, 0.01f, 0.1f, 0.001f, 0.01f); // 初始化左电机 PID 速度控制器
+    pid_init(&motor_r_pid, 0.01f, 0.1f, 0.001f, 0.01f); // 初始化右电机 PID 速度控制器
+    motor_l_pid.mode = PID_MODE_SPEED; // 设置左电机为速度控制模式
+    motor_r_pid.mode = PID_MODE_SPEED; // 设置右电机为速度控制模式
 }
 
 void motor_l_set_speed(const int32_t speed) {
