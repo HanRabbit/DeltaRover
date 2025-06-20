@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>串口控制</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #eeeeee;
+        }
+
+        #panel {
+
+            position: -webkit-sticky;
+            position: sticky;
+            top: 28px;
+            display: block;
+            padding: 28px;
+            margin: 28px;
+            background-color: rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(8px);
+            border-style: solid;
+            border-radius: 32px;
+            border-color: grey;
+            border-width: 1px;
+        }
+
+        .system {
+            color: lightgreen;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .send {
+            color: yellow;
+        }
+
+        .receive {
+            color: cyan;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="panel" style="width:fit-content;">
+        <h1>串口控制</h1>
+        <!-- pid slider and input box for number -->
+        <input type="text" id="baudRate" value="115200" placeholder="波特率">
+        <button onclick="connectSerial()">连接串口</button>
+        <br>
+        <input type="checkbox" id="autoSet" checked>自动设置
+        <br>
+        <input type="range" id="pSlider" min="0" max="0.2" value="0" step="0.001">
+        <input type="number" id="pInput" min="0" max="0.2" value="0" step="0.001">
+        <br>
+        <input type="range" id="iSlider" min="0" max="1" value="0" step="0.001">
+        <input type="number" id="iInput" min="0" max="1" value="0" step="0.001">
+        <br>
+        <input type="range" id="dSlider" min="0" max="0.2" value="0" step="0.001">
+        <input type="number" id="dInput" min="0" max="0.2" value="0" step="0.001">
+        <br>
+        <input type="range" id="vSlider" min="0" max="80" value="0" step="1">
+        <input type="number" id="vInput" min="0" max="80" value="0" step="1">
+        <br>
+        <button id="forceResend">强制重传</button>
+        <button id="forceReset">强行复位</button>
+        <button id="stop">停转</button>
+        <br>
+        <button id="clear">清空</button>
+        
+    </div>
+    <div id="responseOutput" style="white-space:pre-wrap; font-family:Cascadia Code, Consolas, 'Courier New';"></div>
+    <div id="bottom-anchor"></div>
+    <script>
+        var p = 0, i = 0, d = 0, v = 0;
+        var port = null;
+        var baudRate = 115200;
+        var autoSet = true;//自动设置
+        var textReader = null;
+        var textWriter = null;
+        var textEncoderStream = null;
+        var textDecoderStream = null;
+        var promiseWriteClosed = null;
+        var promiseReadClosed = null;
+
+        const responseOutputDiv = document.getElementById('responseOutput')
+        const bottomAnchor = document.getElementById('bottom-anchor');
+        function appendSystem(msg) {
+            console.log(msg);
+            responseOutputDiv.innerHTML += `<span class="system">${msg}</span>`;
+            bottomAnchor.scrollIntoView({ behavior: 'instant' });
+        }
+        function appendSend(msg) {
+            responseOutputDiv.innerHTML += `<span class="send">${msg}</span>`;
+            bottomAnchor.scrollIntoView({ behavior: 'instant' });
+        }
+        function appendReceive(msg) {
+            responseOutputDiv.innerHTML += `<span class="receive">${msg}</span>`;
+            bottomAnchor.scrollIntoView({ behavior: 'instant' });
+        }
+        function appendError(msg) {
+            console.error(msg);
+            responseOutputDiv.innerHTML += `<span class="error">${msg}</span>`;
+            bottomAnchor.scrollIntoView({ behavior: 'instant' });
+        }
+        function clearOutput() {
+            responseOutputDiv.innerHTML = '';
+            bottomAnchor.scrollIntoView({ behavior: 'instant' });
+        }
+        function sendP() {
+            textWriter.write(`SET P ${p};\n`);
+            appendSend(`SET P ${p};\n`);
+        }
+        function sendI() {
+            textWriter.write(`SET I ${i};\n`);
+            appendSend(`SET I ${i};\n`);
+        }
+        function sendD() {
+            textWriter.write(`SET D ${d};\n`);
+            appendSend(`SET D ${d};\n`);
+        }
+        function sendV() {
+            textWriter.write(`SET M ${v};\n`);
+            appendSend(`SET M ${v};\n`);
+        }
+        function stop() {
+            var slider = document.getElementById('vSlider');
+            slider.value = 0;
+            var input = document.getElementById('vInput');
+            input.value = 0;
+            v = 0;
+            sendV();
+
+        }
+        function sendPIDv() {
+            textWriter.write(`SET P ${p};\n`);
+            appendSend(`SET P ${p};\n`);
+            textWriter.write(`SET I ${i};\n`);
+            appendSend(`SET I ${i};\n`);
+            textWriter.write(`SET D ${d};\n`);
+            appendSend(`SET D ${d};\n`);
+            textWriter.write(`SET M ${v};\n`);
+            appendSend(`SET M ${v};\n`);
+        }
+        function forceReset() {
+            textWriter.write(`SET R 0.0;\n`);
+            appendSend(`SET R 0.0;\n`);
+
+        }
+        function onSliderChange(sliderId, inputId) {
+            var slider = document.getElementById(sliderId);
+            var input = document.getElementById(inputId);
+            input.value = slider.value;
+            if (sliderId === 'pSlider') {
+                p = parseFloat(slider.value);
+                if (autoSet) { sendP(); }
+            } else if (sliderId === 'iSlider') {
+                i = parseFloat(slider.value);
+                if (autoSet) { sendI(); }
+            } else if (sliderId === 'dSlider') {
+                d = parseFloat(slider.value);
+                if (autoSet) { sendD(); }
+            } else if (sliderId === 'vSlider') {
+                v = parseFloat(slider.value);
+                if (autoSet) { sendV(); }
+            }
+        }
+        function onInputChange(sliderId, inputId) {
+            var slider = document.getElementById(sliderId);
+            var input = document.getElementById(inputId);
+            slider.value = input.value;
+            if (sliderId === 'pSlider') {
+                p = parseFloat(slider.value);
+                if (autoSet) { sendP(); }
+            } else if (sliderId === 'iSlider') {
+                i = parseFloat(slider.value);
+                if (autoSet) { sendI(); }
+            } else if (sliderId === 'dSlider') {
+                d = parseFloat(slider.value);
+                if (autoSet) { sendD(); }
+            }  else if (sliderId === 'vSlider') {
+                v = parseFloat(slider.value);
+                if (autoSet) { sendV(); }
+            }
+        }
+        async function connectSerial() {
+            if ("serial" in navigator) {
+                appendSystem("Web Serial API 支持该浏览器\n");
+                // 请求串口权限并打开串口
+                try {
+                    appendSystem("请求串口权限...\n");
+                    const port = await navigator.serial.requestPort();
+                    // 设置波特率
+                    appendSystem("设置波特率:" + baudRate + "\n");
+                    await port.open({ baudRate: baudRate });
+                    appendSystem("串口已打开\n");
+                    textEncoderStream = new TextEncoderStream();
+                    textDecoderStream = new TextDecoderStream();
+                    promiseWriteClosed = textEncoderStream.readable.pipeTo(port.writable);
+                    promiseReadClosed = port.readable.pipeTo(textDecoderStream.writable);
+                    textWriter = textEncoderStream.writable.getWriter();
+                    textReader = textDecoderStream.readable.getReader();
+                    textWriter.write("FUCK THE UNIVERSE.\n");
+                    appendSystem("FUCK THE UNIVERSE.\n");
+                    appendSystem("串口控制初始化完成\n");
+                    startSerialEcho();
+                }
+                catch (error) {
+                    appendError("无法打开串口:" + error + "\n");
+                }
+
+            }
+            else {
+                appendError("Web Serial API 不支持该浏览器\n");
+            }
+        }
+        async function startSerialEcho() {
+            // 开始读取串口回显
+            appendSystem("开始读取串口回显...\n");
+
+            while (true) {
+                const { value, done } = await textReader.read();
+                if (done) {
+                    // 允许稍后关闭串口。
+                    textReader.releaseLock();
+                    break;
+                }
+                // 将回显内容输出到respondOutput
+                appendReceive(value);
+            }
+        }
+        // 初始化串口控制
+        function eventBinding() {
+            const baudRateCheckbox = document.getElementById('baudRate');
+            baudRateCheckbox.onchange = function () {
+                baudRate = parseFloat(baudRateCheckbox.value);
+            };
+            const autoSetCheckbox = document.getElementById('autoSet');
+            autoSetCheckbox.onchange = function () {
+                autoSet = autoSetCheckbox.checked;
+            };
+            const pSlider = document.getElementById('pSlider');
+            const pInput = document.getElementById('pInput');
+            pSlider.oninput = function () { onSliderChange('pSlider', 'pInput'); };
+            pInput.oninput = function () { onInputChange('pSlider', 'pInput'); };
+
+            const iSlider = document.getElementById('iSlider');
+            const iInput = document.getElementById('iInput');
+            iSlider.oninput = function () { onSliderChange('iSlider', 'iInput'); };
+            iInput.oninput = function () { onInputChange('iSlider', 'iInput'); };
+
+            const dSlider = document.getElementById('dSlider');
+            const dInput = document.getElementById('dInput');
+            dSlider.oninput = function () { onSliderChange('dSlider', 'dInput'); };
+            dInput.oninput = function () { onInputChange('dSlider', 'dInput'); };
+
+            const vSlider = document.getElementById('vSlider');
+            const vInput = document.getElementById('vInput');
+            vSlider.oninput = function () { onSliderChange('vSlider', 'vInput'); };
+            vInput.oninput = function () { onInputChange('vSlider', 'vInput'); };
+
+
+            const forceResendButton = document.getElementById('forceResend');
+            forceResendButton.onclick = function () { sendPID(); };
+            forceResetButton = document.getElementById('forceReset');
+            forceResetButton.onclick = function () { forceReset(); };
+            stopButton = document.getElementById('stop');
+            stopButton.onclick = function () { stop(); };
+
+            const clearButton = document.getElementById('clear');
+            clearButton.onclick = function () { clearOutput(); };
+            appendSystem("事件绑定完成\n");
+        }
+        window.onload = function () {
+            eventBinding();
+        }
+    </script>
+</body>
+
+</html>
