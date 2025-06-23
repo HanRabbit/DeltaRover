@@ -11,12 +11,13 @@
 #include "../../Hardware/buzzer/buzzer.h"
 #include "../../Hardware/motor/motor.h"
 #include "../../Hardware/ir/ir.h"
+#include "../../Utils/uart_cmd/uart_cmd.h"
 
 /* 串口状态打印 */
-#define UART_STATUS_PRINT 0
+#define UART_STATUS_PRINT 1
 
 /* 串口 PID 调参 */
-#define UART_DEBUG 1
+#define UART_DEBUG 0
 
 /* OLED 状态打印 */
 #define OLED_STATUS_PRINT 1

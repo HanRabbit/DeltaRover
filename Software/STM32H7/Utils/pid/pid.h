@@ -3,6 +3,8 @@
 
 #include "stm32h7xx_hal.h"
 
+#define MOTOR_DIE_AREA 100
+
 typedef enum {
     PID_MODE_POSITION,  /* 位置控制模式 */
     PID_MODE_SPEED      /* 速度控制模式 */
@@ -20,11 +22,15 @@ typedef struct {
     float last_output;      /* 上一次输出值 */
     float integral_max;     /* 积分最大值 */
     float integral_min;     /* 积分最小值 */
+    float output_max;       /* 输出最大值 */
+    float output_min;       /* 输出最小值 */
     PID_Mode_t mode;        /* PID 模式 */
 } PID_t;
 
 void pid_init(PID_t *pid, float kp, float ki, float kd, float dt);
 void pid_set_mode(PID_t *pid, const PID_Mode_t mode);
 float pid_update(PID_t *pid, float current_speed);
+void pid_set_output_limits(PID_t *pid, float output_min, float output_max);
+void pid_set_integral_limits(PID_t *pid, float integral_min, float integral_max);
 
 #endif //PID_H

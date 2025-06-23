@@ -26,7 +26,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
 #include <string.h>
 #include "../../Hardware/sys_info/sys_info.h"
 /* USER CODE END Includes */
@@ -103,17 +102,17 @@ int main(void)
   MX_TIM12_Init();
   MX_TIM3_Init();
   MX_TIM13_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   sys_init();
-  motor_set_speed(10, 10); // 设置初始速度为 20
+  ir_update();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-        // ir_control();
-        motor_update();
-        HAL_Delay(10);
+      sys_info_update();
+      HAL_Delay(30);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -151,7 +150,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLN = 144;
   RCC_OscInitStruct.PLL.PLLP = 10;
   RCC_OscInitStruct.PLL.PLLQ = 2;
-  RCC_OscInitStruct.PLL.PLLR = 2;
+  RCC_OscInitStruct.PLL.PLLR = 4;
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
