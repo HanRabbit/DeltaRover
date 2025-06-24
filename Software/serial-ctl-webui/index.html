@@ -20,6 +20,7 @@
             padding: 28px;
             margin: 28px;
             background-color: rgba(0, 0, 0, 0.28);
+            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             border-style: solid;
             border-radius: 32px;
@@ -47,7 +48,7 @@
 
 <body>
     <div id="panel" style="width:fit-content;">
-        <h1>串口控制</h1>
+        <h2>速度环PID</h2>
         <!-- pid slider and input box for number -->
         <input type="text" id="baudRate" value="115200" placeholder="波特率">
         <button onclick="connectSerial()">连接串口</button>
@@ -63,20 +64,33 @@
         <input type="range" id="dSlider" min="0" max="0.2" value="0" step="0.001">
         <input type="number" id="dInput" min="0" max="0.2" value="0" step="0.001">
         <br>
-        <input type="range" id="vSlider" min="0" max="80" value="0" step="1">
-        <input type="number" id="vInput" min="0" max="80" value="0" step="1">
-        <br>
         <button id="forceResend">强制重传</button>
         <button id="forceReset">强行复位</button>
         <button id="stop">停转</button>
         <br>
+        <h2>位置环PID</h2>
+        <input type="range" id="ppSlider" min="-100" max="100" value="0" step="1">
+        <input type="number" id="ppInput" min="-100" max="100" value="0" step="1">
+        <br>
+        <input type="range" id="piSlider" min="-0" max="0" value="0" step="1">
+        <input type="number" id="piInput" min="-0" max="0" value="0" step="1">
+        <br>
+        <input type="range" id="pdSlider" min="-100" max="100" value="0" step="1">
+        <input type="number" id="pdInput" min="-100" max="100" value="0" step="1">
+        <br>
+        <input type="range" id="vSlider" min="-6000" max="6000" value="0" step="1">
+        <input type="number" id="vInput" min="-6000" max="6000" value="0" step="1">
+        <br>
         <button id="clear">清空</button>
+    </div>
+
+
         
     </div>
     <div id="responseOutput" style="white-space:pre-wrap; font-family:Cascadia Code, Consolas, 'Courier New';"></div>
     <div id="bottom-anchor"></div>
     <script>
-        var p = 0, i = 0, d = 0, v = 0;
+        var p = 0, i = 0, d = 0, v = 0, pp = 0, pi = 0, pd = 0;
         var port = null;
         var baudRate = 115200;
         var autoSet = true;//自动设置
@@ -112,37 +126,50 @@
             bottomAnchor.scrollIntoView({ behavior: 'instant' });
         }
         function sendP() {
-            textWriter.write(`SET P ${p};\n`);
-            appendSend(`SET P ${p};\n`);
+            textWriter.write(`:SET P ${p};\n`);
+            appendSend(`:SET P ${p};\n`);
         }
         function sendI() {
-            textWriter.write(`SET I ${i};\n`);
-            appendSend(`SET I ${i};\n`);
+            textWriter.write(`:SET I ${i};\n`);
+            appendSend(`:SET I ${i};\n`);
         }
         function sendD() {
-            textWriter.write(`SET D ${d};\n`);
-            appendSend(`SET D ${d};\n`);
+            textWriter.write(`:SET D ${d};\n`);
+            appendSend(`:SET D ${d};\n`);
         }
         function sendV() {
-            textWriter.write(`SET M ${v};\n`);
-            appendSend(`SET M ${v};\n`);
+            textWriter.write(`:SET M ${v};\n`);
+            appendSend(`:SET M ${v};\n`);
+        }
+        function sendPP() {
+            textWriter.write(`:SET p ${pp};\n`);
+            appendSend(`:SET p ${pp};\n`);
+        }
+        function sendPI() {
+            textWriter.write(`:SET i ${pi};\n`);
+            appendSend(`:SET i ${pi};\n`);
+        }
+        function sendPD() {
+            textWriter.write(`:SET d ${pd};\n`);
+            appendSend(`:SET d ${pd};\n`);
         }
         function stop() {
-            var slider = document.getElementById('vSlider');
-            slider.value = 0;
-            var input = document.getElementById('vInput');
-            input.value = 0;
-            v = 0;
-            sendV();
-
+            textWriter.write(`:SET R 0.0;\n`);
+            appendSend(`:SET R 0.0;\n`);
         }
-        function sendPIDv() {
+        function sendPIDpidv() {
             textWriter.write(`SET P ${p};\n`);
             appendSend(`SET P ${p};\n`);
             textWriter.write(`SET I ${i};\n`);
             appendSend(`SET I ${i};\n`);
             textWriter.write(`SET D ${d};\n`);
             appendSend(`SET D ${d};\n`);
+            textWriter.write(`SET p ${v};\n`);
+            appendSend(`SET p ${v};\n`);
+            textWriter.write(`SET i ${v};\n`);
+            appendSend(`SET i ${v};\n`);
+            textWriter.write(`SET d ${v};\n`);
+            appendSend(`SET d ${v};\n`);
             textWriter.write(`SET M ${v};\n`);
             appendSend(`SET M ${v};\n`);
         }
@@ -167,6 +194,17 @@
             } else if (sliderId === 'vSlider') {
                 v = parseFloat(slider.value);
                 if (autoSet) { sendV(); }
+            } else if (sliderId === 'ppSlider') {
+                pp = parseFloat(slider.value);
+                if (autoSet) { sendPP(); }
+            } else if (sliderId === 'piSlider') {
+                pi = parseFloat(slider.value);
+                if (autoSet) { sendPI(); }
+            } else if (sliderId === 'pdSlider') {
+                pd = parseFloat(slider.value);
+                if (autoSet) { sendPD(); }
+            } else {
+                console.log("FUCK! the sliderId is wrong!");
             }
         }
         function onInputChange(sliderId, inputId) {
@@ -185,7 +223,19 @@
             }  else if (sliderId === 'vSlider') {
                 v = parseFloat(slider.value);
                 if (autoSet) { sendV(); }
+            } else if (sliderId === 'ppSlider') {
+                pp = parseFloat(slider.value);
+                if (autoSet) { sendPP(); }
+            } else if (sliderId === 'piSlider') {
+                pi = parseFloat(slider.value);
+                if (autoSet) { sendPI(); }
+            } else if (sliderId === 'pdSlider') {
+                pd = parseFloat(slider.value);
+                if (autoSet) { sendPD(); }
+            } else {
+                console.log("FUCK! the sliderId is wrong!");
             }
+
         }
         async function connectSerial() {
             if ("serial" in navigator) {
@@ -263,9 +313,23 @@
             vSlider.oninput = function () { onSliderChange('vSlider', 'vInput'); };
             vInput.oninput = function () { onInputChange('vSlider', 'vInput'); };
 
+            const ppSlider = document.getElementById('ppSlider');
+            const ppInput = document.getElementById('ppInput');
+            ppSlider.oninput = function () { onSliderChange('ppSlider', 'ppInput'); };
+            ppInput.oninput = function () { onInputChange('ppSlider', 'ppInput'); };
+
+            const piSlider = document.getElementById('piSlider');
+            const piInput = document.getElementById('piInput');
+            piSlider.oninput = function () { onSliderChange('piSlider', 'piInput'); };
+            piInput.oninput = function () { onInputChange('piSlider', 'piInput'); };
+
+            const pdSlider = document.getElementById('pdSlider');
+            const pdInput = document.getElementById('pdInput');
+            pdSlider.oninput = function () { onSliderChange('pdSlider', 'pdInput'); };
+            pdInput.oninput = function () { onInputChange('pdSlider', 'pdInput'); };
 
             const forceResendButton = document.getElementById('forceResend');
-            forceResendButton.onclick = function () { sendPID(); };
+            forceResendButton.onclick = function () { sendPIDpidv(); };
             forceResetButton = document.getElementById('forceReset');
             forceResetButton.onclick = function () { forceReset(); };
             stopButton = document.getElementById('stop');
